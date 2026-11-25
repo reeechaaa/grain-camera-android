@@ -1,0 +1,473 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GRAIN</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #080808;
+  color: #f5f1e8;
+  font-family: Arial, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 5px 18px;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 5px;
+}
+
+.subtitle {
+  color: #888;
+  font-size: 9px;
+  letter-spacing: 3px;
+  margin-top: 4px;
+}
+
+.status {
+  color: #b7a88b;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.camera {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #171717;
+}
+
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: contrast(1.05) saturate(.85);
+}
+
+#video.active-filter {
+  filter: var(--filter, none);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right,
+      transparent 33.2%, rgba(255,255,255,.15) 33.5%,
+      transparent 33.8%, transparent 66.2%,
+      rgba(255,255,255,.15) 66.5%, transparent 66.8%),
+    linear-gradient(to bottom,
+      transparent 33.2%, rgba(255,255,255,.15) 33.5%,
+      transparent 33.8%, transparent 66.2%,
+      rgba(255,255,255,.15) 66.5%, transparent 66.8%);
+  opacity: .5;
+}
+
+.top-controls {
+  position: absolute;
+  top: 18px;
+  left: 15px;
+  right: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.control {
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.15);
+  color: white;
+  border-radius: 30px;
+  padding: 10px 14px;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.bottom-info {
+  position: absolute;
+  bottom: 18px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+}
+
+.exposure {
+  font-size: 11px;
+  color: #eee;
+  letter-spacing: 1px;
+  background: rgba(0,0,0,.4);
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.filter-panel {
+  padding: 18px 0 10px;
+}
+
+.filter-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #999;
+  margin-bottom: 12px;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;
+}
+
+.filter {
+  min-width: 78px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.preview {
+  height: 65px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #77694c, #262626);
+  margin-bottom: 7px;
+  border: 2px solid transparent;
+}
+
+.filter.selected .preview {
+  border-color: #e6d5ae;
+}
+
+.filter-name {
+  font-size: 9px;
+  color: #bbb;
+  letter-spacing: 1px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 15px 5px 8px;
+}
+
+.gallery {
+  width: 45px;
+  height: 45px;
+  border-radius: 10px;
+  background: #333;
+  border: 2px solid #777;
+}
+
+.shutter {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #f4f0e7;
+  border: 5px solid #555;
+  box-shadow: 0 0 0 3px #eee;
+}
+
+.switch {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: #222;
+  border: 1px solid #555;
+  color: white;
+  font-size: 20px;
+}
+
+.footer {
+  text-align: center;
+  color: #555;
+  font-size: 9px;
+  letter-spacing: 3px;
+  padding-top: 8px;
+}
+
+.message {
+  position: absolute;
+  left: 50%;
+  bottom: 120px;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,.8);
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-size: 12px;
+  display: none;
+  white-space: nowrap;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <div class="header">
+    <div>
+      <div class="logo">GRAIN</div>
+      <div class="subtitle">FILM · LIGHT · MOMENTS</div>
+    </div>
+    <div class="status">● CAMERA</div>
+  </div>
+
+  <div class="camera">
+
+    <video id="video" autoplay playsinline></video>
+
+    <div class="overlay">
+      <div class="grid"></div>
+
+      <div class="top-controls">
+        <button class="control" id="flash">FLASH OFF</button>
+        <button class="control" id="flip">↻ FLIP</button>
+      </div>
+
+      <div class="bottom-info">
+        <div class="exposure">AUTO · ISO · FILM</div>
+        <div class="exposure" id="filterLabel">CLASSIC</div>
+      </div>
+    </div>
+
+    <div class="message" id="message"></div>
+
+  </div>
+
+  <div class="filter-panel">
+    <div class="filter-title">
+      <span>FILM SIMULATIONS</span>
+      <span>01 / 08</span>
+    </div>
+
+    <div class="filters" id="filters">
+
+      <div class="filter selected" data-filter="classic">
+        <div class="preview"></div>
+        <div class="filter-name">CLASSIC</div>
+      </div>
+
+      <div class="filter" data-filter="chrome">
+        <div class="preview" style="background:linear-gradient(135deg,#53666c,#c1b9a4)"></div>
+        <div class="filter-name">CHROME</div>
+      </div>
+
+      <div class="filter" data-filter="warm">
+        <div class="preview" style="background:linear-gradient(135deg,#b17b45,#5c3826)"></div>
+        <div class="filter-name">WARM</div>
+      </div>
+
+      <div class="filter" data-filter="portrait">
+        <div class="preview" style="background:linear-gradient(135deg,#d8a28c,#706052)"></div>
+        <div class="filter-name">PORTRAIT</div>
+      </div>
+
+      <div class="filter" data-filter="mono">
+        <div class="preview" style="background:linear-gradient(135deg,#ddd,#222)"></div>
+        <div class="filter-name">MONO</div>
+      </div>
+
+      <div class="filter" data-filter="vivid">
+        <div class="preview" style="background:linear-gradient(135deg,#176c4a,#e5a22b)"></div>
+        <div class="filter-name">VIVID</div>
+      </div>
+
+      <div class="filter" data-filter="fade">
+        <div class="preview" style="background:linear-gradient(135deg,#a9a38b,#88736a)"></div>
+        <div class="filter-name">FADED</div>
+      </div>
+
+      <div class="filter" data-filter="night">
+        <div class="preview" style="background:linear-gradient(135deg,#273a49,#16141c)"></div>
+        <div class="filter-name">NIGHT</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="gallery" id="gallery"></button>
+    <button class="switch" id="switchCamera">↻</button>
+    <button class="shutter" id="capture"></button>
+    <button class="switch" id="timer">3s</button>
+    <button class="switch" id="settings">⚙</button>
+  </div>
+
+  <div class="footer">
+    A LITTLE CAMERA. A LOT OF CHARACTER.
+  </div>
+
+</div>
+
+<script>
+const video = document.getElementById("video");
+const message = document.getElementById("message");
+
+let currentCamera = "environment";
+let currentStream = null;
+let selectedFilter = "classic";
+let flashEnabled = false;
+
+const filters = {
+  classic: "contrast(1.08) saturate(.85) sepia(.08)",
+  chrome: "contrast(1.12) saturate(.75) brightness(.95)",
+  warm: "sepia(.25) saturate(1.2) contrast(1.05)",
+  portrait: "saturate(.75) brightness(1.05) contrast(.95)",
+  mono: "grayscale(1) contrast(1.15)",
+  vivid: "saturate(1.5) contrast(1.1)",
+  fade: "sepia(.15) saturate(.65) brightness(1.08) contrast(.85)",
+  night: "saturate(.7) hue-rotate(15deg) contrast(1.2) brightness(.85)"
+};
+
+function showMessage(text) {
+  message.textContent = text;
+  message.style.display = "block";
+
+  setTimeout(() => {
+    message.style.display = "none";
+  }, 2000);
+}
+
+async function startCamera() {
+  try {
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => track.stop());
+    }
+
+    currentStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: currentCamera
+      },
+      audio: false
+    });
+
+    video.srcObject = currentStream;
+    showMessage("CAMERA READY");
+  } catch (error) {
+    showMessage("CAMERA PERMISSION REQUIRED");
+  }
+}
+
+document.querySelectorAll(".filter").forEach(item => {
+  item.addEventListener("click", () => {
+
+    document.querySelectorAll(".filter").forEach(f =>
+      f.classList.remove("selected")
+    );
+
+    item.classList.add("selected");
+
+    selectedFilter = item.dataset.filter;
+
+    video.style.filter = filters[selectedFilter];
+
+    document.getElementById("filterLabel").textContent =
+      selectedFilter.toUpperCase();
+
+  });
+});
+
+document.getElementById("switchCamera").onclick = () => {
+  currentCamera =
+    currentCamera === "environment"
+      ? "user"
+      : "environment";
+
+  startCamera();
+};
+
+document.getElementById("flash").onclick = () => {
+  flashEnabled = !flashEnabled;
+
+  document.getElementById("flash").textContent =
+    flashEnabled ? "FLASH ON" : "FLASH OFF";
+
+  showMessage("FLASH " + (flashEnabled ? "ON" : "OFF"));
+};
+
+document.getElementById("capture").onclick = () => {
+
+  if (!video.videoWidth) {
+    showMessage("CAMERA NOT READY");
+    return;
+  }
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+
+  ctx.filter = filters[selectedFilter];
+
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const image = canvas.toDataURL("image/jpeg", 0.95);
+
+  const link = document.createElement("a");
+
+  link.href = image;
+  link.download = "GRAIN_" + Date.now() + ".jpg";
+
+  link.click();
+
+  showMessage("PHOTO CAPTURED");
+};
+
+document.getElementById("timer").onclick = () => {
+  showMessage("SELF TIMER READY");
+};
+
+document.getElementById("gallery").onclick = () => {
+  showMessage("YOUR PHOTOS WILL APPEAR IN GALLERY");
+};
+
+document.getElementById("settings").onclick = () => {
+  showMessage("GRAIN CAMERA");
+};
+
+startCamera();
+</script>
+
+</body>
+</html>
